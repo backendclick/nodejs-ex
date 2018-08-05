@@ -2,6 +2,8 @@
 var express = require('express'),
     app     = express(),
     morgan  = require('morgan');
+
+const chamadosCollection = "chamados";
     
 Object.assign=require('object-assign')
 
@@ -78,20 +80,34 @@ app.get('/', function (req, res) {
   res.send("Acesso raiz");
 });
 
-app.get('/pagecount', function (req, res) {
+app.get('/open', function (req, res) {
   // try to initialize the db on every request if it's not already
   // initialized.
   if (!db) {
     initDb(function(err){});
   }
-  if (db) {
-    db.collection('counts').count(function(err, count ){
-      res.send('{ pageCount: ' + count + '}');
+  var chamado = req.query;
+  try{
+    dbo.collection(chamadosCollection).insertOne(chamado, function(err, res) {
+      if (err) throw err;
+      console.log("1 document inserted");
+      res.send({status:1, message : "1 document inserted"});
+      db.close();
     });
-  } else {
-    res.send('{ pageCount: -1 }');
+  } catch(e){
+    res.send({message : "Erro ao tentar abrir chamado", details: e});
   }
 });
+
+app.get('/count', function (req, res) {
+    if (db) {
+      db.collection(chamadosCollection).count(function(err, count ){
+        res.send('{ chamadosCount : ' + count + '}');
+      });
+    } else {
+      res.send('{ chamadosCount : -1 }');
+    }
+  });
 
 // error handling
 app.use(function(err, req, res, next){
