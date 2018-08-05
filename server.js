@@ -4,6 +4,8 @@ var express = require('express'),
     morgan  = require('morgan');
 
 const chamadosCollection = "chamados";
+
+app.use(express.bodyParser());
     
 Object.assign=require('object-assign')
 
