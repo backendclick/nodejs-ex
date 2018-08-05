@@ -19,9 +19,9 @@ describe('Basic routes tests', function() {
 
     })
 
-    it('GET to /chamadosCount should return 200', function(done){
+    it('GET to /count should return 200', function(done){
         chai.request(reqServer)
-        .get('/pagecount')
+        .get('/count')
         .end(function(err, res) {
             res.should.have.status(200);
             done();
