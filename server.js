@@ -89,6 +89,7 @@ app.post('/open', function (req, res) {
   }
 
   var chamado = req.body;
+  console.log("chamado recebido", chamado);
   try{
     dbo.collection(chamadosCollection).insertOne(chamado, function(err, res) {
       if (err) throw err;
