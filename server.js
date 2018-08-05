@@ -98,9 +98,8 @@ app.post('/open', function (req, res) {
   }
 
   var chamado = req.body;
-  console.log("chamado recebido", chamado);
   try{
-    dbo.collection(chamadosCollection).insertOne(chamado, function(err, res) {
+    db.collection(chamadosCollection).insertOne(chamado, function(err, res) {
       if (err) throw err;
       console.log("1 document inserted");
       res.send({status:1, message : "1 document inserted"});
