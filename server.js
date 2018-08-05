@@ -5,8 +5,15 @@ var express = require('express'),
 
 const chamadosCollection = "chamados";
 
-app.use(express.bodyParser());
-    
+var bodyParser = require('body-parser');
+var app = express();
+
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: false }));
+
+// parse application/json
+app.use(bodyParser.json());
+
 Object.assign=require('object-assign')
 
 app.engine('html', require('ejs').renderFile);
