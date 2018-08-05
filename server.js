@@ -80,13 +80,15 @@ app.get('/', function (req, res) {
   res.send("Acesso raiz");
 });
 
-app.get('/open', function (req, res) {
-  // try to initialize the db on every request if it's not already
-  // initialized.
+app.post('/open', function (req, res) {
+  console.log("Requisição de abertura de chamado recebida às " + new Date());
+  console.log("Corpo da requisição", req.body);
+
   if (!db) {
     initDb(function(err){});
   }
-  var chamado = req.query;
+
+  var chamado = req.body;
   try{
     dbo.collection(chamadosCollection).insertOne(chamado, function(err, res) {
       if (err) throw err;
@@ -100,14 +102,14 @@ app.get('/open', function (req, res) {
 });
 
 app.get('/count', function (req, res) {
-    if (db) {
-      db.collection(chamadosCollection).count(function(err, count ){
-        res.send('{ chamadosCount : ' + count + '}');
-      });
-    } else {
-      res.send('{ chamadosCount : -1 }');
-    }
-  });
+  if (db) {
+    db.collection(chamadosCollection).count(function(err, count ){
+      res.send('{ chamadosCount : ' + count + '}');
+    });
+  } else {
+    res.send('{ chamadosCount : -1 }');
+  }
+});
 
 // error handling
 app.use(function(err, req, res, next){
