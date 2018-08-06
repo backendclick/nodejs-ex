@@ -101,22 +101,27 @@ app.post('/open', function (req, res) {
 
     var chamado = req.body;
     console.log("Max number atual:");
-    db.collection(chamadosCollection).find().sort({osNumber:-1}).limit(1).nextObject(function(err, object){
-      var lastOsNumber = object;
-      console.log("lastOsNumber: ");
-      console.log(lastOsNumber);
-      
-      chamado.osNumber = lastOsNumber;
-
-      db.collection(chamadosCollection).insertOne(chamado, function(err, res) {
-        if (err) throw err;
-        console.log("1 document inserted");
-        res.send({status:1, message : "1 document inserted"});
-        db.close();
+    var cursor = db.collection(chamadosCollection).find().sort({osNumber:-1}).limit(1);
+    if(cursor.hasNext()){
+      cursor.nextObject(function(err, object){
+        var lastOsNumber = object;
+        console.log("lastOsNumber: ");
+        console.log(lastOsNumber);
+        
+        chamado.osNumber = lastOsNumber;
+  
+        db.collection(chamadosCollection).insertOne(chamado, function(err, res) {
+          if (err) throw err;
+          console.log("1 document inserted");
+          res.send({status:1, message : "1 document inserted"});
+          db.close();
+        });
       });
-    });
+    } else {
+      throw new Error("Não foi encontrado max osNumber.");
+    }
   } catch(e){
-    res.send({message : "Erro ao tentar abrir chamado", details: e});
+    res.send({atus : -1, message : "Erro ao tentar abrir chamado", details: e});
   }
 });
 
