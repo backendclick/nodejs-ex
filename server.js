@@ -126,6 +126,15 @@ app.get('/count', function (req, res) {
   }
 });
 
+app.get('/removeAll', function (req, res) {
+  if (db) {
+    db.collection(chamadosCollection).removeAll({});
+    res.send({"success" : true});
+  } else {
+    res.send({"success" : false});
+  }
+});
+
 app.get('/getOpeneds', (req, res) => {
   console.log("---------> /getOpeneds <-------------")
   var MongoClient = mongodb.MongoClient;
