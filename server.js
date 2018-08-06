@@ -125,7 +125,7 @@ app.get('/count', function (req, res) {
 app.get('/getOpeneds', (req, res) => {
   console.log("---------> /getOpeneds <-------------")
   var MongoClient = mongodb.MongoClient;
-  MongoClient.connect(dbUrl, (err, db)=>{
+  MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
     let dbo = db.db('local')
     dbo.collection(chamadosCollection).find({status : 0}).toArray(function(err, items) {
@@ -139,7 +139,7 @@ app.get('/getOpeneds', (req, res) => {
 app.get('/getAll', (req, res) => {
   console.log("---------> /getAll <-------------")
   var MongoClient = mongodb.MongoClient;
-  MongoClient.connect(dbUrl, (err, db)=>{
+  MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
     let dbo = db.db('local')
     dbo.collection(chamadosCollection).find().toArray(function(err, items) {
