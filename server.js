@@ -3,6 +3,8 @@ var express = require('express'),
     app     = express(),
     morgan  = require('morgan');
 
+var mongodb = require('mongodb');
+
 const chamadosCollection = "chamados";
 
 var bodyParser = require('body-parser');
@@ -49,7 +51,7 @@ var db = null,
 var initDb = function(callback) {
   if (mongoURL == null) return;
 
-  var mongodb = require('mongodb');
+  
   if (mongodb == null) return;
 
   mongodb.connect(mongoURL, function(err, conn) {
