@@ -100,6 +100,10 @@ app.post('/open', function (req, res) {
   }
 
   var chamado = req.body;
+  console.log("Max number atual:");
+  var lastOsNumber = db.collection(chamadosCollection).find().sort({osNumber:-1}).limit(1);
+  console.log(lastOsNumber);
+  chamado.osNumber = lastOsNumber;
   try{
     db.collection(chamadosCollection).insertOne(chamado, function(err, res) {
       if (err) throw err;
