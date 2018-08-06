@@ -94,22 +94,26 @@ app.get('/', function (req, res) {
 app.post('/open', function (req, res) {
   console.log("Requisição de abertura de chamado recebida às " + new Date());
   console.log("Corpo da requisição", req.body);
-
-  if (!db) {
-    initDb(function(err){});
-  }
-
-  var chamado = req.body;
-  console.log("Max number atual:");
-  var lastOsNumber = db.collection(chamadosCollection).find().sort({osNumber:-1}).limit(1);
-  console.log(lastOsNumber);
-  chamado.osNumber = lastOsNumber;
   try{
-    db.collection(chamadosCollection).insertOne(chamado, function(err, res) {
-      if (err) throw err;
-      console.log("1 document inserted");
-      res.send({status:1, message : "1 document inserted"});
-      db.close();
+    if (!db) {
+      initDb(function(err){});
+    }
+
+    var chamado = req.body;
+    console.log("Max number atual:");
+    db.collection(chamadosCollection).find().sort({osNumber:-1}).limit(1).nextObject(function(err, object){
+      var lastOsNumber = object;
+      console.log("lastOsNumber: ");
+      console.log(lastOsNumber);
+      
+      chamado.osNumber = lastOsNumber;
+
+      db.collection(chamadosCollection).insertOne(chamado, function(err, res) {
+        if (err) throw err;
+        console.log("1 document inserted");
+        res.send({status:1, message : "1 document inserted"});
+        db.close();
+      });
     });
   } catch(e){
     res.send({message : "Erro ao tentar abrir chamado", details: e});
