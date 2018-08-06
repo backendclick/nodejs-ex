@@ -127,8 +127,7 @@ app.get('/getOpeneds', (req, res) => {
   var MongoClient = mongodb.MongoClient;
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
-    let dbo = db.db('local')
-    dbo.collection(chamadosCollection).find({status : 0}).toArray(function(err, items) {
+    db.collection(chamadosCollection).find({status : 0}).toArray(function(err, items) {
       console.log("Finalizada recuperação dos chamados.  get-'/chamados/getOpeneds' ");
       console.log(items);
       res.send(items);
@@ -141,8 +140,7 @@ app.get('/getAll', (req, res) => {
   var MongoClient = mongodb.MongoClient;
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
-    let dbo = db.db('local')
-    dbo.collection(chamadosCollection).find().toArray(function(err, items) {
+    db.collection(chamadosCollection).find().toArray(function(err, items) {
       console.log("Finalizada recuperação dos chamados.  get-'/getAll' ");
       console.log(items);
       res.send(items);
