@@ -120,6 +120,34 @@ app.get('/count', function (req, res) {
   }
 });
 
+app.get('/getOpeneds', (req, res) => {
+  console.log("---------> /getOpeneds <-------------")
+  var MongoClient = mongodb.MongoClient;
+  MongoClient.connect(dbUrl, (err, db)=>{
+    if(err) throw err;
+    let dbo = db.db('local')
+    dbo.collection(chamadosCollection).find({status : 0}).toArray(function(err, items) {
+      console.log("Finalizada recuperação dos chamados.  get-'/chamados/getOpeneds' ");
+      console.log(items);
+      res.send(items);
+    });
+  })
+});
+
+app.get('/getAll', (req, res) => {
+  console.log("---------> /getAll <-------------")
+  var MongoClient = mongodb.MongoClient;
+  MongoClient.connect(dbUrl, (err, db)=>{
+    if(err) throw err;
+    let dbo = db.db('local')
+    dbo.collection(chamadosCollection).find().toArray(function(err, items) {
+      console.log("Finalizada recuperação dos chamados.  get-'/getAll' ");
+      console.log(items);
+      res.send(items);
+    });
+  })
+});
+
 // error handling
 app.use(function(err, req, res, next){
   console.error(err.stack);
