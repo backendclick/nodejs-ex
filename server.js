@@ -1,9 +1,10 @@
-//  OpenShift sample Node application
 var express = require('express'),
     app     = express(),
     morgan  = require('morgan');
 
 var mongodb = require('mongodb');
+
+var developMongoUrl = "mongodb://localhost:27017/";
 
 const chamadosCollection = "chamados";
 
@@ -23,7 +24,7 @@ app.use(morgan('combined'))
 
 var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
-    mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
+    mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL || developMongoUrl,
     mongoURLLabel = "";
 
 if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
@@ -94,35 +95,64 @@ app.get('/', function (req, res) {
 app.post('/open', function (req, res) {
   console.log("Requisição de abertura de chamado recebida às " + new Date());
   console.log("Corpo da requisição", req.body);
-  try{
-    if (!db) {
-      initDb(function(err){});
-    }
+  let chamado = req.body;
 
-    var chamado = req.body;
-    console.log("Max number atual:");
-    var cursor = db.collection(chamadosCollection).find().sort({osNumber:-1}).limit(1);
-    if(cursor.hasNext()){
-      cursor.nextObject(function(err, object){
-        var lastOsNumber = object;
-        console.log("lastOsNumber: ");
-        console.log(lastOsNumber);
-        
-        chamado.osNumber = lastOsNumber;
-  
-        db.collection(chamadosCollection).insertOne(chamado, function(err, res) {
+  var MongoClient = mongodb.MongoClient;
+  MongoClient.connect(mongoURL, (err, db)=>{
+    if(err) throw err;
+    db.db('local').collection(chamadosCollection).find().sort({osNumber : -1}).limit(1).toArray(function(err, items) {
+      if (err) throw err;
+      console.log("Finalizado find().sort({osNumber : -1}).limit(1) ", items);
+      let maxOsNumber = items[0].osNumber;
+      let nextOsNumber = maxOsNumber + 1;
+      chamado.osNumber = nextOsNumber;
+      db.db('local').collection(chamadosCollection).insertOne(chamado, function(err, res) {
           if (err) throw err;
           console.log("1 document inserted");
-          res.send({status:1, message : "1 document inserted"});
+          res.json({ status : 1, message : "Os aberta com sucesso" });
           db.close();
         });
-      });
-    } else {
-      throw new Error("Não foi encontrado max osNumber.");
-    }
-  } catch(e){
-    res.send({atus : -1, message : "Erro ao tentar abrir chamado", details: e});
-  }
+    });
+    // var cursor = db.db('local').collection(chamadosCollection).find();
+    // if(cursor.hasNext()){
+    //   cursor.nextObject(function(err, object){
+    //     console.log("entrou no next object");
+    //   });
+    // } else {
+    //   throw new Error("Não foi encontrado max osNumber.");
+    // }
+  })
+
+  // try{
+  //   if (!db) {
+  //     initDb(function(err){});
+  //   }
+
+    
+  //   var chamado = req.body;
+  //   console.log("Max number atual:");
+  //   var cursor = db.collection(chamadosCollection).find();//.sort({osNumber:-1}).limit(1);
+  //   if(cursor.hasNext()){
+  //     cursor.nextObject(function(err, object){
+  //       var lastOsNumber = object;
+  //       console.log("lastOsNumber: ");
+  //       console.log(lastOsNumber);
+        
+  //       chamado.osNumber = lastOsNumber;
+  
+  //       db.collection(chamadosCollection).insertOne(chamado, function(err, res) {
+  //         if (err) throw err;
+  //         console.log("1 document inserted");
+  //         res.send({status:1, message : "1 document inserted"});
+  //         db.close();
+  //       });
+  //     });
+  //   } else {
+  //     throw new Error("Não foi encontrado max osNumber.");
+  //   }
+  // } catch(e){
+  //   res.send({atus : -1, message : "Erro ao tentar abrir chamado", details: e});
+  // }
 });
 
 app.get('/count', function (req, res) {
