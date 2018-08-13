@@ -13,7 +13,7 @@ if(developMongoUrl){
   console.log("Ambiente de PRODUÇÃO detectado.");
 }
 
-const dbName = "local";
+const dbName = "sampledb";
 const chamadosCollection = "chamados";
 
 // parse application/x-www-form-urlencoded
