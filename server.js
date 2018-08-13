@@ -9,9 +9,14 @@ var mongodb = require('mongodb'),
 var developMongoUrl = process.env.developMongoUrl;
 if(developMongoUrl){
   console.log("Ambiente DEV detectado.");
+  console.log(developMongoUrl);
 } else {
   console.log("Ambiente de PRODUÇÃO detectado.");
 }
+var STATUS = {
+  OPEN : 1, 
+  CLOSED : 0
+};
 
 const dbName = "sampledb";
 const chamadosCollection = "chamados";
@@ -95,14 +100,19 @@ app.post('/open', function (req, res) {
     if(err) throw err;
     db.db(dbName).collection(chamadosCollection).find().sort({osNumber : -1}).limit(1).toArray(function(err, items) {
       if (err) throw err;
-      console.log("Finalizado find().sort({osNumber : -1}).limit(1) ", items);
+      console.log("Iniciando find().sort({osNumber : -1}).limit(1) ", items);
+
       let maxOsNumber = items[0].osNumber;
       let nextOsNumber = maxOsNumber + 1;
       chamado.osNumber = nextOsNumber;
+
+      chamado.status = STATUS.OPEN;
+      chamado.openingDate = new Date();
+
       db.db(dbName).collection(chamadosCollection).insertOne(chamado, function(err, insertResponse) {
           if (err) throw err;
           console.log("1 document inserted");
-          res.json({ status : 1, message : `Os ${nextOsNumber} aberta com sucesso` });
+          res.json({ returnCode : 1, message : `Os ${nextOsNumber} aberta com sucesso` });
           db.close();
         });
     });
@@ -127,23 +137,12 @@ app.get('/count', function (req, res) {
   });
 });
 
-app.get('/removeAll', function (req, res) {
-  if(req.query.senha === "fudeu"){
-    MongoClient.connect(mongoURL, (err, db)=>{
-      if(err) throw err;
-      db.db(dbName).collection(chamadosCollection).removeAll({});
-    });
-  } else {
-    res.json({status : -1, msg: "senha errada"});
-  }
-});
 
 app.get('/getOpeneds', (req, res) => {
   console.log("---------> /getOpeneds <-------------")
-  var MongoClient = mongodb.MongoClient;
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
-    db.db(dbName).collection(chamadosCollection).find({status : 0}).toArray(function(err, items) {
+    db.db(dbName).collection(chamadosCollection).find({status : 1}).toArray(function(err, items) {
       console.log("Finalizada recuperação dos chamados.  get-'/chamados/getOpeneds' ");
       console.log(items);
       res.send(items);
@@ -153,7 +152,6 @@ app.get('/getOpeneds', (req, res) => {
 
 app.get('/getAll', (req, res) => {
   console.log("---------> /getAll <-------------")
-  var MongoClient = mongodb.MongoClient;
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
     db.db(dbName).collection(chamadosCollection).find().toArray(function(err, items) {
@@ -162,6 +160,20 @@ app.get('/getAll', (req, res) => {
       res.send(items);
     });
   })
+});
+
+app.get('/removeAll', function (req, res) {
+  if(req.query.senha === "fudeu"){
+    MongoClient.connect(mongoURL, (err, db)=>{
+      if(err) throw err;
+      db.db(dbName).collection(chamadosCollection).remove(
+        {},
+        { justOne : false }
+     )
+    });
+  } else {
+    res.json({returnCode : -1, msg: "senha errada"});
+  }
 });
 
 // error handling
