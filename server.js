@@ -1,19 +1,23 @@
 var express = require('express'),
     app     = express(),
-    morgan  = require('morgan');
+    morgan  = require('morgan'),
+    bodyParser = require('body-parser');
 
-var mongodb = require('mongodb');
+var mongodb = require('mongodb'),
+    MongoClient = mongodb.MongoClient;
 
-var developMongoUrl = "mongodb://localhost:27017/";
+var developMongoUrl = process.env.developMongoUrl;
+if(developMongoUrl){
+  console.log("Ambiente DEV detectado.");
+} else {
+  console.log("Ambiente de PRODUÇÃO detectado.");
+}
 
+const dbName = "local";
 const chamadosCollection = "chamados";
-
-var bodyParser = require('body-parser');
-var app = express();
 
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: false }));
-
 // parse application/json
 app.use(bodyParser.json());
 
@@ -27,7 +31,12 @@ var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL || developMongoUrl,
     mongoURLLabel = "";
 
+function log(msg){
+  console.log(msg);
+}
+
 if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
+  console.log("Montando string de conexão...");
   var mongoServiceName = process.env.DATABASE_SERVICE_NAME.toUpperCase(),
       mongoHost = process.env[mongoServiceName + '_SERVICE_HOST'],
       mongoPort = process.env[mongoServiceName + '_SERVICE_PORT'],
@@ -43,6 +52,8 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
     // Provide UI label that excludes user id and pw
     mongoURLLabel += mongoHost + ':' + mongoPort + '/' + mongoDatabase;
     mongoURL += mongoHost + ':' +  mongoPort + '/' + mongoDatabase;
+    console.log("String de conexão definida:");
+    console.log(mongoURL);
 
   }
 }
@@ -50,9 +61,10 @@ var db = null,
     dbDetails = new Object();
 
 var initDb = function(callback) {
-  if (mongoURL == null) return;
-
-  
+  if (mongoURL == null){
+    console.log(mongoURL);
+    return;
+  }
   if (mongodb == null) return;
 
   mongodb.connect(mongoURL, function(err, conn) {
@@ -71,24 +83,6 @@ var initDb = function(callback) {
 };
 
 app.get('/', function (req, res) {
-  // try to initialize the db on every request if it's not already
-  // initialized.
-  // if (!db) {
-  //   initDb(function(err){});
-  // }
-  // if (db) {
-  //   var col = db.collection('counts');
-  //   // Create a document with request IP and current time of request
-  //   col.insert({ip: req.ip, date: Date.now()});
-  //   col.count(function(err, count){
-  //     if (err) {
-  //       console.log('Error running count. Message:\n'+err);
-  //     }
-  //     res.render('index.html', { pageCountMessage : count, dbInfo: dbDetails });
-  //   });
-  // } else {
-  //   res.render('index.html', { pageCountMessage : null});
-  // }
   res.send("Acesso raiz");
 });
 
@@ -96,24 +90,23 @@ app.post('/open', function (req, res) {
   console.log("Requisição de abertura de chamado recebida às " + new Date());
   console.log("Corpo da requisição", req.body);
   let chamado = req.body;
-
-  var MongoClient = mongodb.MongoClient;
+  
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
-    db.db('local').collection(chamadosCollection).find().sort({osNumber : -1}).limit(1).toArray(function(err, items) {
+    db.db(dbName).collection(chamadosCollection).find().sort({osNumber : -1}).limit(1).toArray(function(err, items) {
       if (err) throw err;
       console.log("Finalizado find().sort({osNumber : -1}).limit(1) ", items);
       let maxOsNumber = items[0].osNumber;
       let nextOsNumber = maxOsNumber + 1;
       chamado.osNumber = nextOsNumber;
-      db.db('local').collection(chamadosCollection).insertOne(chamado, function(err, res) {
+      db.db(dbName).collection(chamadosCollection).insertOne(chamado, function(err, insertResponse) {
           if (err) throw err;
           console.log("1 document inserted");
-          res.json({ status : 1, message : "Os aberta com sucesso" });
+          res.json({ status : 1, message : `Os ${nextOsNumber} aberta com sucesso` });
           db.close();
         });
     });
-    // var cursor = db.db('local').collection(chamadosCollection).find();
+    // var cursor = db.db(dbName).collection(chamadosCollection).find();
     // if(cursor.hasNext()){
     //   cursor.nextObject(function(err, object){
     //     console.log("entrou no next object");
@@ -123,54 +116,25 @@ app.post('/open', function (req, res) {
     // }
   })
 
-  // try{
-  //   if (!db) {
-  //     initDb(function(err){});
-  //   }
-
-    
-  //   var chamado = req.body;
-  //   console.log("Max number atual:");
-  //   var cursor = db.collection(chamadosCollection).find();//.sort({osNumber:-1}).limit(1);
-  //   if(cursor.hasNext()){
-  //     cursor.nextObject(function(err, object){
-  //       var lastOsNumber = object;
-  //       console.log("lastOsNumber: ");
-  //       console.log(lastOsNumber);
-        
-  //       chamado.osNumber = lastOsNumber;
-  
-  //       db.collection(chamadosCollection).insertOne(chamado, function(err, res) {
-  //         if (err) throw err;
-  //         console.log("1 document inserted");
-  //         res.send({status:1, message : "1 document inserted"});
-  //         db.close();
-  //       });
-  //     });
-  //   } else {
-  //     throw new Error("Não foi encontrado max osNumber.");
-  //   }
-  // } catch(e){
-  //   res.send({atus : -1, message : "Erro ao tentar abrir chamado", details: e});
-  // }
 });
 
 app.get('/count', function (req, res) {
-  if (db) {
-    db.collection(chamadosCollection).count(function(err, count ){
-      res.send('{ chamadosCount : ' + count + '}');
+  MongoClient.connect(mongoURL, (err, db)=>{
+    if(err) throw err;
+    db.db(dbName).collection(chamadosCollection).count(function(err, count ){
+        res.send('{ chamadosCount : ' + count + '}');
     });
-  } else {
-    res.send('{ chamadosCount : -1 }');
-  }
+  });
 });
 
 app.get('/removeAll', function (req, res) {
-  if (db) {
-    db.collection(chamadosCollection).removeAll({});
-    res.send({"success" : true});
+  if(req.query.senha === "fudeu"){
+    MongoClient.connect(mongoURL, (err, db)=>{
+      if(err) throw err;
+      db.db(dbName).collection(chamadosCollection).removeAll({});
+    });
   } else {
-    res.send({"success" : false});
+    res.json({status : -1, msg: "senha errada"});
   }
 });
 
@@ -179,7 +143,7 @@ app.get('/getOpeneds', (req, res) => {
   var MongoClient = mongodb.MongoClient;
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
-    db.collection(chamadosCollection).find({status : 0}).toArray(function(err, items) {
+    db.db(dbName).collection(chamadosCollection).find({status : 0}).toArray(function(err, items) {
       console.log("Finalizada recuperação dos chamados.  get-'/chamados/getOpeneds' ");
       console.log(items);
       res.send(items);
@@ -192,7 +156,7 @@ app.get('/getAll', (req, res) => {
   var MongoClient = mongodb.MongoClient;
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
-    db.collection(chamadosCollection).find().toArray(function(err, items) {
+    db.db(dbName).collection(chamadosCollection).find().toArray(function(err, items) {
       console.log("Finalizada recuperação dos chamados.  get-'/getAll' ");
       console.log(items);
       res.send(items);
@@ -206,9 +170,9 @@ app.use(function(err, req, res, next){
   res.status(500).send('Something bad happened!');
 });
 
-initDb(function(err){
-  console.log('Error connecting to Mongo. Message:\n'+err);
-});
+// initDb(function(err){
+//   console.log('Error connecting to Mongo. Message:\n'+err);
+// });
 
 app.listen(port, ip);
 console.log('Server running on http://%s:%s', ip, port);
