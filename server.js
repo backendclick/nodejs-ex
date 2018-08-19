@@ -2,6 +2,10 @@ var express = require('express'),
     app     = express(),
     morgan  = require('morgan'),
     bodyParser = require('body-parser');
+var cors = require('cors');
+// Object.assign=require('object-assign');
+app.use(cors());
+
 
 var mongodb = require('mongodb'),
     MongoClient = mongodb.MongoClient;
