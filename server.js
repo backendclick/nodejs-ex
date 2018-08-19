@@ -103,6 +103,10 @@ app.post('/open', function (req, res) {
       console.log("Iniciando find().sort({osNumber : -1}).limit(1) ", items);
 
       let maxOsNumber = items[0].osNumber;
+      if(isNaN(maxOsNumber)){
+        res.json({ returnCode : -1, message : `maxOsNumber is NaN` });
+        return false;
+      }
       let nextOsNumber = maxOsNumber + 1;
       chamado.osNumber = nextOsNumber;
 
