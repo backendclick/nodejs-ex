@@ -12,11 +12,11 @@ var mongodb = require('mongodb'),
 
 var developMongoUrl = process.env.developMongoUrl;
 if(developMongoUrl){
-  console.log("Ambiente DEV detectado.");
-  console.log(developMongoUrl);
+  console.log("Carregando ambiente DEV. developMongoUrl: ", developMongoUrl);
 } else {
-  console.log("Ambiente de PRODUÇÃO detectado.");
+  console.log("Não foi localizada variável de ambiente de desenvolvimento. Carregando ambiente de PRODUÇÃO.");
 }
+
 var STATUS = {
   OPEN : 1, 
   CLOSED : 0
@@ -118,11 +118,11 @@ app.post('/open', function (req, res) {
       chamado.openingDate = new Date();
 
       db.db(dbName).collection(chamadosCollection).insertOne(chamado, function(err, insertResponse) {
-          if (err) throw err;
-          console.log("1 document inserted");
-          res.json({ returnCode : 1, message : `Os ${nextOsNumber} aberta com sucesso` });
-          db.close();
-        });
+        if (err) throw err;
+        console.log("1 document inserted");
+        res.json({ returnCode : 1, message : `Os ${nextOsNumber} aberta com sucesso` });
+        db.close();
+      });
     });
     // var cursor = db.db(dbName).collection(chamadosCollection).find();
     // if(cursor.hasNext()){
@@ -141,6 +141,30 @@ app.get('/count', function (req, res) {
     if(err) throw err;
     db.db(dbName).collection(chamadosCollection).count(function(err, count ){
         res.send('{ chamadosCount : ' + count + '}');
+    });
+  });
+});
+
+app.get('/initialize', function (req, res) {
+  var initializeChamado = {
+    "osNumber" : 0,
+    "status" : 0,
+    "clientId" : 0,
+    "clientName" : "",
+    "openingUser" : "",
+    "openingDate" : "",
+    "description" : ".",
+    "comments" : [],
+    "mailTo" : "",
+    "closingDate" : "",
+    "solution" : ""
+  };
+  MongoClient.connect(mongoURL, (err, db)=>{
+    if(err) throw err;
+    db.db(dbName).collection(chamadosCollection).insertOne(initializeChamado, function(err, insertResponse) {
+      if (err) throw err;
+      res.json({ returnCode : 1, message : `DB initialized successfully` });
+      db.close();
     });
   });
 });
