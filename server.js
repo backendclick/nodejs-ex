@@ -2,6 +2,7 @@ var express = require('express'),
     app     = express(),
     morgan  = require('morgan'),
     bodyParser = require('body-parser');
+const nodemailer = require('nodemailer');
 var cors = require('cors');
 // Object.assign=require('object-assign');
 app.use(cors());
@@ -17,7 +18,7 @@ if(developMongoUrl){
   console.log("Não foi localizada variável de ambiente de desenvolvimento. Carregando ambiente de PRODUÇÃO.");
 }
 
-var STATUS = {
+const STATUS = {
   OPEN : 1, 
   CLOSED : 0
 };
@@ -40,9 +41,129 @@ var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL || developMongoUrl,
     mongoURLLabel = "";
 
-function log(msg){
-  console.log(msg);
-}
+const ChamadosCrud = {
+  fecharChamado : (chamado, res, callBack) => {
+    try{
+      console.log("|---    Iniciando método fecharChamado    ---|");
+      console.log("Parâmetro recebidos : (_id, openingUser, mailTo, solution):");
+      console.log((chamado._id + " - " + chamado.openingUser + " - " + chamado.mailTo + " - " + chamado.solution));
+      var MongoClient = mongodb.MongoClient;
+      MongoClient.connect(mongoURL, (err, db)=>{
+        console.log("Iniciando processamento do método MongoClient.connect");
+        if (err) throw err;
+        var myquery =  { "osNumber" : parseInt(chamado.osNumber) };
+        var newvalues = { $set: {"status" : 0, 
+        "openingUser" : chamado.openingUser,
+        "mailTo" : chamado.mailTo,
+        "solution" : chamado.solution,
+        "closingDate" : new Date() } };
+        console.log("Tentando realizar o update... - método fecharChamado");
+        db.db(dbName).collection(chamadosCollection).updateOne(myquery, newvalues, function(err, res) {
+        console.log("1 document updated");
+        db.close();
+        callBack();
+        });
+      });
+      console.log("Finalizando fechamento");  
+    } catch (ex){
+      res.send({returnCode : -1, message : ex});
+      console.log("Erro finalizando fechamento.", ex);  
+    }
+  }
+};
+
+const EmailManager = {
+  sendCloseMail : function (chamado){
+    console.log("EmailManager - Iniciando envio de email de FECHAMENTO. Chamado: ", chamado);
+    
+    var transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'tarapi007@gmail.com',
+        pass: 'generalize'
+      }
+    });
+  
+    var mailOptions = {
+      from: 'atendimentochamado@gmail.com',
+      to: chamado.mailTo,
+      bcc: "clickticonsultoria@gmail.com",
+      subject: `Encerramento do Chamado ${chamado.osNumber} - ClickTI Informática`, 
+      html: `
+        Olá! <br/><br/>
+
+        Informamos que o chamado de número <b>${chamado.osNumber}</b> foi encerrado. <br/>
+        Caso possamos ajudar em algo mais, pode responder neste email. <br/><br/>
+
+        -------------------------- <br/><br/>
+
+        <b>Solicitante:</b> ${chamado.openingUser}<br/>
+
+        <b>Descrição inicial:</b> ${chamado.description}<br/>
+
+        <b>Solução executada:</b> ${chamado.solution}<br/><br/>
+
+        -------------------------- <br/><br/>
+
+        ClickTI Informática`
+    };
+  
+    transporter.sendMail(mailOptions, function(error, info){
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email enviado. Reponse: " + info.response);
+        console.log("MailOptions:");
+        console.log( mailOptions);
+      }
+    });
+  },
+  sendOpenMail : function (chamado){
+    console.log("EmailManager - Iniciando envio de email de ABERTURA. Chamado: ", chamado);
+    
+    var transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'tarapi007@gmail.com',
+        pass: 'generalize'
+      }
+    });
+  
+    var mailOptions = {
+      from: 'atendimentochamado@gmail.com',
+      to: chamado.mailTo,
+      bcc: "clickticonsultoria@gmail.com",
+      subject: `Abertura de Chamado ${chamado.osNumber} - ClickTI Informática`, 
+      html: `
+        Olá! <br/><br/>
+
+        Informamos que foi aberto o chamado de número <b>${chamado.osNumber}</b>. <br/>
+        Entraremos em contato para atuação. 
+        <br/>
+        <br/>
+        -------------------------- 
+        <br/>
+        <br/>
+        <b>Solicitante:</b> ${chamado.openingUser}<br/>
+        <b>Descrição inicial:</b> ${chamado.description}<br/>
+
+        -------------------------- <br/><br/>
+
+        ClickTI Informática`
+    };
+  
+    transporter.sendMail(mailOptions, function(error, info){
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email enviado. Reponse: " + info.response);
+        console.log("MailOptions:");
+        console.log( mailOptions);
+      }
+    });
+  }
+};
+
 
 if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
   console.log("Montando string de conexão...");
@@ -120,8 +241,9 @@ app.post('/open', function (req, res) {
       db.db(dbName).collection(chamadosCollection).insertOne(chamado, function(err, insertResponse) {
         if (err) throw err;
         console.log("1 document inserted");
-        res.json({ returnCode : 1, message : `Os ${nextOsNumber} aberta com sucesso` });
         db.close();
+        res.json({ returnCode : 1, message : `Os ${nextOsNumber} aberta com sucesso` });
+        EmailManager.sendOpenMail(chamado);
       });
     });
     // var cursor = db.db(dbName).collection(chamadosCollection).find();
@@ -136,6 +258,17 @@ app.post('/open', function (req, res) {
 
 });
 
+app.get('/close', (req, res) => {
+  console.log("|---    Requisição GET =>     /chamados/close    ---|");
+  console.log(req.query);
+  var chamado = req.query;
+  ChamadosCrud.fecharChamado(chamado, res, ()=>{
+    console.log("Respondendo requisição...");
+    res.json({returnCode : 1, message : "1 document updated"});
+    EmailManager.sendCloseMail(chamado);
+  });
+});
+
 app.get('/count', function (req, res) {
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
@@ -148,7 +281,7 @@ app.get('/count', function (req, res) {
 app.get('/initialize', function (req, res) {
   var initializeChamado = {
     "osNumber" : 0,
-    "status" : 0,
+    "status" : STATUS.CLOSED,
     "clientId" : 0,
     "clientName" : "",
     "openingUser" : "",
@@ -174,7 +307,7 @@ app.get('/getOpeneds', (req, res) => {
   console.log("---------> /getOpeneds <-------------")
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
-    db.db(dbName).collection(chamadosCollection).find({status : 1}).toArray(function(err, items) {
+    db.db(dbName).collection(chamadosCollection).find({status : STATUS.OPEN}).toArray(function(err, items) {
       console.log("Finalizada recuperação dos chamados.  get-'/chamados/getOpeneds' ");
       console.log(items);
       res.send(items);
