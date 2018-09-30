@@ -305,14 +305,25 @@ app.get('/initialize', function (req, res) {
 
 app.get('/getOpeneds', (req, res) => {
   console.log("---------> /getOpeneds <-------------")
-  MongoClient.connect(mongoURL, (err, db)=>{
-    if(err) throw err;
-    db.db(dbName).collection(chamadosCollection).find({status : STATUS.OPEN}).toArray(function(err, items) {
-      console.log("Finalizada recuperação dos chamados.  get-'/chamados/getOpeneds' ");
-      console.log(items);
-      res.send(items);
+  try{
+    MongoClient.connect(mongoURL, (err, db)=>{
+      console.log(err);
+      if(err) {
+        console.log(err);
+        res.send({status: -1});
+        return false;
+      } 
+      db.db(dbName).collection(chamadosCollection).find({status : STATUS.OPEN}).toArray(function(err, items) {
+        console.log("Finalizada recuperação dos chamados.  get-'/chamados/getOpeneds' ");
+        console.log(items);
+        res.send(items);
+      });
     });
-  })
+  } catch (e){
+    console.error("[ /getOpeneds] - Falha ao conectar ao banco", e);
+  } finally {
+    console.log("finally");
+  }
 });
 
 app.get('/getAll', (req, res) => {
