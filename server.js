@@ -4,9 +4,9 @@ var express = require('express'),
     bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 var cors = require('cors');
+var moment = require('moment-timezone');
 // Object.assign=require('object-assign');
 app.use(cors());
-
 
 var mongodb = require('mongodb'),
     MongoClient = mongodb.MongoClient;
@@ -56,7 +56,7 @@ const ChamadosCrud = {
         "openingUser" : chamado.openingUser,
         "mailTo" : chamado.mailTo,
         "solution" : chamado.solution,
-        "closingDate" : new Date() } };
+        "closingDate" : getNow() } };
         console.log("Tentando realizar o update... - método fecharChamado");
         db.db(dbName).collection(chamadosCollection).updateOne(myquery, newvalues, function(err, res) {
         console.log("1 document updated");
@@ -217,7 +217,7 @@ app.get('/', function (req, res) {
 });
 
 app.post('/open', function (req, res) {
-  console.log("Requisição de abertura de chamado recebida às " + new Date());
+  console.log("Requisição de abertura de chamado recebida às " + getNow());
   console.log("Corpo da requisição", req.body);
   let chamado = req.body;
   
@@ -236,7 +236,7 @@ app.post('/open', function (req, res) {
       chamado.osNumber = nextOsNumber;
 
       chamado.status = STATUS.OPEN;
-      chamado.openingDate = new Date();
+      chamado.openingDate = getNow();
 
       db.db(dbName).collection(chamadosCollection).insertOne(chamado, function(err, insertResponse) {
         if (err) throw err;
@@ -362,3 +362,8 @@ app.listen(port, ip);
 console.log('Server running on http://%s:%s', ip, port);
 
 module.exports = app ;
+
+function getNow() {
+  return moment().tz('America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss');
+}
+
