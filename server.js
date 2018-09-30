@@ -187,30 +187,30 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
 
   }
 }
-var db = null,
-    dbDetails = new Object();
+// var db = null,
+//     dbDetails = new Object();
 
-var initDb = function(callback) {
-  if (mongoURL == null){
-    console.log(mongoURL);
-    return;
-  }
-  if (mongodb == null) return;
+// var initDb = function(callback) {
+//   if (mongoURL == null){
+//     console.log(mongoURL);
+//     return;
+//   }
+//   if (mongodb == null) return;
 
-  mongodb.connect(mongoURL, function(err, conn) {
-    if (err) {
-      callback(err);
-      return;
-    }
+//   mongodb.connect(mongoURL, function(err, conn) {
+//     if (err) {
+//       callback(err);
+//       return;
+//     }
 
-    db = conn;
-    dbDetails.databaseName = db.databaseName;
-    dbDetails.url = mongoURLLabel;
-    dbDetails.type = 'MongoDB';
+//     db = conn;
+//     dbDetails.databaseName = db.databaseName;
+//     dbDetails.url = mongoURLLabel;
+//     dbDetails.type = 'MongoDB';
 
-    console.log('Connected to MongoDB at: %s', mongoURL);
-  });
-};
+//     console.log('Connected to MongoDB at: %s', mongoURL);
+//   });
+// };
 
 app.get('/', function (req, res) {
   res.send("Acesso raiz");
@@ -305,25 +305,21 @@ app.get('/initialize', function (req, res) {
 
 app.get('/getOpeneds', (req, res) => {
   console.log("---------> /getOpeneds <-------------")
-  try{
-    MongoClient.connect(mongoURL, (err, db)=>{
-      console.log(err);
+  MongoClient.connect(mongoURL, (err, db)=>{
+    try{
       if(err) {
-        console.log(err);
-        res.send({status: -1});
-        return false;
+        throw err;
       } 
       db.db(dbName).collection(chamadosCollection).find({status : STATUS.OPEN}).toArray(function(err, items) {
         console.log("Finalizada recuperação dos chamados.  get-'/chamados/getOpeneds' ");
         console.log(items);
         res.send(items);
       });
-    });
-  } catch (e){
-    console.error("[ /getOpeneds] - Falha ao conectar ao banco", e);
-  } finally {
-    console.log("finally");
-  }
+    } catch (e){
+      console.error("[ /getOpeneds] - Falha ao conectar ao banco", e);
+      res.send({status: -1});
+    }
+  });
 });
 
 app.get('/getAll', (req, res) => {
