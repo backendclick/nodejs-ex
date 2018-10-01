@@ -61,7 +61,9 @@ const ChamadosCrud = {
         db.db(dbName).collection(chamadosCollection).updateOne(myquery, newvalues, function(err, res) {
         console.log("1 document updated");
         db.close();
-        callBack();
+        if(callback){
+          callBack();
+        }
         });
       });
       console.log("Finalizando fechamento");  
@@ -90,14 +92,12 @@ const EmailManager = {
       bcc: "clickticonsultoria@gmail.com",
       subject: `Encerramento do Chamado ${chamado.osNumber} - ClickTI Informática`, 
       html: `
-        Olá! <br/><br/>
+        Olá ${chamado.openingUser}.
 
         Informamos que o chamado de número <b>${chamado.osNumber}</b> foi encerrado. <br/>
         Caso possamos ajudar em algo mais, pode responder neste email. <br/><br/>
 
         -------------------------- <br/><br/>
-
-        <b>Solicitante:</b> ${chamado.openingUser}<br/>
 
         <b>Descrição inicial:</b> ${chamado.description}<br/>
 
@@ -128,27 +128,28 @@ const EmailManager = {
         pass: 'generalize'
       }
     });
-  
+    
+    chamado.mailTo.map(function(atual, indice){
+      chamado.mailTo[indice] = atual.value;
+    });
+
     var mailOptions = {
       from: 'atendimentochamado@gmail.com',
-      to: chamado.mailTo,
+      to: chamado.mailTo[0],
+      cc: chamado.mailTo.slice(1),
       bcc: "clickticonsultoria@gmail.com",
       subject: `Abertura de Chamado ${chamado.osNumber} - ClickTI Informática`, 
       html: `
-        Olá! <br/><br/>
-
+        Olá ${chamado.openingUser}. 
+        <br/><br/>
         Informamos que foi aberto o chamado de número <b>${chamado.osNumber}</b>. <br/>
         Entraremos em contato para atuação. 
-        <br/>
-        <br/>
+        <br/><br/>
         -------------------------- 
-        <br/>
-        <br/>
-        <b>Solicitante:</b> ${chamado.openingUser}<br/>
+        <br/><br/>
         <b>Descrição inicial:</b> ${chamado.description}<br/>
-
-        -------------------------- <br/><br/>
-
+        -------------------------- 
+        <br/><br/>
         ClickTI Informática`
     };
   
@@ -292,6 +293,7 @@ app.get('/initialize', function (req, res) {
     "closingDate" : "",
     "solution" : ""
   };
+
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
     db.db(dbName).collection(chamadosCollection).insertOne(initializeChamado, function(err, insertResponse) {
