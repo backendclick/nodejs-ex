@@ -42,7 +42,7 @@ var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     mongoURLLabel = "";
 
 const ChamadosCrud = {
-  fecharChamado : (chamado, res, callBack) => {
+  fecharChamado : (chamado, res, callback) => {
     try{
       console.log("|---    Iniciando método fecharChamado    ---|");
       console.log("Parâmetro recebidos : (_id, openingUser, mailTo, solution):");
@@ -62,7 +62,7 @@ const ChamadosCrud = {
         console.log("1 document updated");
         db.close();
         if(callback){
-          callBack();
+          callback();
         }
         });
       });
@@ -259,10 +259,10 @@ app.post('/open', function (req, res) {
 
 });
 
-app.get('/close', (req, res) => {
-  console.log("|---    Requisição GET =>     /chamados/close    ---|");
-  console.log(req.query);
-  var chamado = req.query;
+app.post('/close', (req, res) => {
+  console.log("|---    Requisição GET =>     /chamados/close    ---| Chamado:");
+  var chamado = req.body;
+  console.log(chamado);
   ChamadosCrud.fecharChamado(chamado, res, ()=>{
     console.log("Respondendo requisição...");
     res.json({returnCode : 1, message : "1 document updated"});
@@ -274,7 +274,7 @@ app.get('/count', function (req, res) {
   MongoClient.connect(mongoURL, (err, db)=>{
     if(err) throw err;
     db.db(dbName).collection(chamadosCollection).count(function(err, count ){
-        res.send('{ chamadosCount : ' + count + '}');
+        res.send('{ chamadosCount : ' + count + ' (1 com id 0)}');
     });
   });
 });
@@ -336,7 +336,7 @@ app.get('/getAll', (req, res) => {
   })
 });
 
-app.get('/removeAll', function (req, res) {
+app.post('/removeAll', function (req, res) {
   if(req.query.senha === "fudeu"){
     MongoClient.connect(mongoURL, (err, db)=>{
       if(err) throw err;
