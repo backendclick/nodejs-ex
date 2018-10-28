@@ -2,3 +2,6 @@
 npm-debug.log
 
 /.history
+.vscode/launch.json
+
+VS-Workspace.js
