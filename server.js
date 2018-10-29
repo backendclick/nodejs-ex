@@ -313,12 +313,32 @@ app.get('/getOpeneds', (req, res) => {
         throw err;
       } 
       db.db(dbName).collection(chamadosCollection).find({status : STATUS.OPEN}).toArray(function(err, items) {
-        console.log("Finalizada recuperação dos chamados.  get-'/chamados/getOpeneds' ");
+        console.log("Finalizada recuperação dos chamados abertos.  get-'/chamados/getOpeneds' ");
         console.log(items);
         res.send(items);
       });
     } catch (e){
       console.error("[ /getOpeneds] - Falha ao conectar ao banco", e);
+      res.send({status: -1});
+    }
+  });
+});
+
+
+app.get('/getCloseds', (req, res) => {
+  console.log("---------> /getCloseds <-------------")
+  MongoClient.connect(mongoURL, (err, db)=>{
+    try{
+      if(err) {
+        throw err;
+      } 
+      db.db(dbName).collection(chamadosCollection).find({status : STATUS.CLOSED}).toArray(function(err, items) {
+        console.log("Finalizada recuperação dos chamados fechados.  post-'/chamados/getCloseds' ");
+        console.log(items);
+        res.send(items);
+      });
+    } catch (e){
+      console.error("[ /getCloseds] - Falha ao conectar ao banco", e);
       res.send({status: -1});
     }
   });
